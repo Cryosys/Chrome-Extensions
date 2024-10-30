@@ -1,7 +1,7 @@
 let color = '#3aa757';
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => group(tabId, tab)); 
-chrome.tabs.onAttached.addListener((tabId, attachInfo) => groupByID(tabId));  
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => group(tabId, tab).then()); 
+chrome.tabs.onAttached.addListener((tabId, attachInfo) => groupByID(tabId).then());  
 
 let lastTab = '';
 
@@ -15,19 +15,27 @@ async function groupByID(tabId)
 async function group(tabId, tab) {
   try
    {
-     console.log('entered');
+      // console.log('entered');
+      // That means that either the tab is being closed or the tab is currently not in any window
+      if(tab.index == -1)
+        return;
+
       // Indicates the current status of the tab, only do stuff if it is complete. Otherwise the code will be executed multiple times.
       // console.log('Tab status: ' + tab.status);
       if(tab.incognito == true || tab.status != "complete")
-      {
-        console.log('entered 1');
         return;
-      }
 
       if(tabId == lastTab)
       {
-        console.log('entered 2');
         lastTab = '';
+        return;
+      }
+
+      let test = await chrome.windows.get(tab.windowId);
+
+      if(test.type != "normal")
+      {
+        console.log('Window type was not normal: ' + test.type);
         return;
       }
 
@@ -46,7 +54,7 @@ async function group(tabId, tab) {
         {
           // console.log('Group title does not match: ' + currentTitle + ' != ' + group.title);
 
-          let queryInfo = { title: currentTitle, windowId: -2 };
+          let queryInfo = { title: currentTitle, windowId: tab.windowId };
           var groups = await chrome.tabGroups.query(queryInfo);
 
           // console.log('Group count: ' + groups.length);
@@ -75,7 +83,7 @@ async function group(tabId, tab) {
         let domain = getDomain(tab.url);
         // console.log('Group URL: ' + domain);
 
-        let queryInfo = { title: domain, windowId: -2 };
+        let queryInfo = { title: domain, windowId: tab.windowId };
         var groups = await chrome.tabGroups.query(queryInfo);
         // console.log('Found groups: ' + groups.length);
 
